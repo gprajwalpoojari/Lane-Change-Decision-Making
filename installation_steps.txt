@@ -1,0 +1,52 @@
+Precautions:
+
+    All terminals will be closed when the code is running, so do not run the program in the terminal (it can be run in PyCharm), 
+    and other running programs should also be closed first;
+    The program environment depends on environment.yaml;
+
+    Write your reinforcement learning program in /CarND-test/src/train/train.py, pay attention to modify your file storage 
+    location in lines 151, 181, etc. In addition, lines 183 and 185 in the program simulate mouse clicks to open the simulation 
+    different monitors may need to modify the mouse position;
+
+    Compile the program according to the prompts in /CarND-test/README.md, understand the role of /CarND-test/src/main.cpp 
+    (may need to be adjusted accordingly);
+
+    Different computers may have different version configurations of tensorflow-gpu, cuda, cudnn, and keras, please install 
+    them yourself;
+
+    To test whether the simulation environment is successfully installed, you can 
+    run decision-making-CarND/term3_sim_linux/term3_sim.x86_64 and decision-making-CarND/CarND-test/src/test/path_planning;
+
+    The program uses C++ and Python to exchange information through the socket. You need to enable Python monitoring first, 
+    otherwise, running path_planning directly will display a connect error error;
+
+    The version and method of tensorflow and keras used in the sample program are relatively old. If configuration is 
+    difficult, you can freely choose the method of network construction (such as pytorch, etc.), as long as Python can 
+    normally monitor data through the socket.
+
+
+Environment configuration steps:
+
+    git clone https://github.com/DRL-CASIA/Autonomous-Driving.git
+
+    cd Autonomous-Driving/decision-making-CarND/term3_sim_linux
+
+    sudo chmod u+x term3_sim.x86_64
+
+    Make sure cmake >= 3.5, make >= 4.1, gcc/g++ >= 5.4 (generally installed, refer to decision-making-CarND/CarND-test/README.md 
+    if not installed)
+
+    Enter the decision-making-CarND/CarND-test folder, run install-ubuntu.sh to install dependencies (bash install-ubuntu.sh)
+
+    Keep it in the decision-making-CarND/CarND-test folder and compile it: mkdir build && cd build cmake .. && make At this 
+    time, run ./path_planning and it shows that the connect error is normal
+    
+    Install anaconda3 or miniconda3
+
+    Modify the last line in environment.yaml to your conda installation location, run conda env create -f environment.yaml 
+    to create a virtual environment
+    
+    Write the decision-making-CarND/CarND-test/src/train/train.py file and run it, the precautions are as above
+
+
+

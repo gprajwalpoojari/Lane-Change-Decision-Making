@@ -6,10 +6,7 @@ class ActorCriticAgent:
         self.state_height = state_height
         self.state_width = state_width
         self.gamma = 0.90  # discount rate
-        self.lamda = 0.90  # eligibility trace decay
-        self.epsilon = 0.3  # exploration rate
-        self.epsilon_min = 0.3
-        self.epsilon_decay = 0.9  # init with pure exploration
+        self.lamda = 0.99  # eligibility trace decay
         self.learning_rate = 0.00025
         self.i = 1
         self.action_size = 3
@@ -30,11 +27,11 @@ class ActorCriticAgent:
         self.actor.model.save_weights(actor_path)
         self.critic.model.save_weights(critic_path)
     
-    def update(self, prev_state, curr_state, immediate_reward):
+    def update(self, curr_state, next_state, immediate_reward):
         advantage = immediate_reward + self.gamma * self.critic.model.predict(
-                        curr_state) - self.critic.model.predict(prev_state)
-        self.actor.train(self.gamma, self.lamda, advantage)
-        self.critic.train(self.gamma, self.lamda, advantage)
-        action = self.actor.act(curr_state)
+                        next_state) - self.critic.model.predict(curr_state)
+        
+        self.actor.train(self.gamma, self.lamda, advantage, curr_state)
+        self.critic.train(self.gamma, self.lamda, advantage, curr_state)
         self.i = self.gamma * self.i
-        return action
+        

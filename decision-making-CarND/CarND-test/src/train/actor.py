@@ -12,9 +12,9 @@ class Actor:
         self.state_width = state_width
         self.action_size = action_size
         self.learning_rate = learning_rate
-        self.z = 0
         self.model = self._build_model()
-        
+        self.z = [np.zeros(arr.shape) for arr in self.model.trainable_variables]
+
     # Neural Net for Actor Model. Takes the current state and outputs probabilities of actions
     def _build_model(self):
         input1 = Input(shape=(1, self.state_height, self.state_width))
@@ -31,22 +31,32 @@ class Actor:
         model = Model(inputs=[input1, input2], outputs=out_put)
         self.optimizer = Adam(lr=self.learning_rate)
         return model
-    
-    def calculate_gradient(self):
-        return 0
 
-    def train(self, gamma, lamda, advantage):
-        gradient = self.calculate_gradient()
-        self.z = gamma * lamda * self.z + gradient
-        self.optimizer.apply_gradients(zip(self.z * advantage, self.model.trainable_variables))
+
+    def train(self, gamma, lamda, advantage, state):
+        with tf.GradientTape() as tape:
+            action_distribution = self.model(state)
+            act_value = np.random.choice(self.action_size, p=np.squeeze(action_distribution))
+            loss = tf.math.log(action_distribution[0, act_value])
+
+        print("#################################ACTOR LOSS#################################")
+        print(loss)
+        gradient = tape.gradient(loss, self.model.trainable_variables)
+        # print(gradient)
+        updated_gradient = []
+        for i in range(len(self.z)):
+            self.z[i] = gamma * lamda * self.z[i] + gradient[i]
+            updated_gradient.append(self.z[i] * advantage[0][0])
+    
+        self.optimizer.apply_gradients(zip(updated_gradient, self.model.trainable_variables))
 
     # Provides an action given a current state
     def act(self, state):
-        act_prob = self.model.predict(state)
-        act_value = np.random.choice(self.action_size, p=np.squeeze(act_prob))
-        act_prob = tf.math.log(act_prob[0, act_value])
-        return act_value, act_prob  # returns action
-    
+
+        action_distribution = self.model.predict(state)
+        act_value = np.random.choice(self.action_size, p=np.squeeze(action_distribution))
+        return act_value  # returns action
+
     def load(self, name):
         self.model.load_weights(name)
 

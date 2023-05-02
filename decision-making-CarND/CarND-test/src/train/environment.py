@@ -91,6 +91,7 @@ class Environment:
             mess_out = str(action)
             mess_out = str.encode(mess_out)
             conn.sendall(mess_out)
+            flag = False
             while True:
                 try:
                     data = conn.recv(2000)
@@ -105,9 +106,9 @@ class Environment:
                 if data == "over":
                     agent.save(self.episode)
                     print("weight saved")
-                    print("episode: {}, epsilon: {}".format(self.episode, agent.epsilon))
+                    print("episode: {}".format(self.episode))
                     with open('/home/prajwal/Autonomous-Driving/decision-making-CarND/CarND-test/src/train/train.txt', 'a') as f:
-                        f.write(" episode {} epsilon {}\n".format(self.episode, agent.epsilon))
+                        f.write(" episode {}\n".format(self.episode))
                     close_all(sim)
                     conn.close()
                     self.episode += 1
@@ -117,7 +118,6 @@ class Environment:
                 except Exception as e:
                     close_all(sim)
                     break
-                print("data loaded")
                 car_d = j[1]['d']
                 ego_car_lane = int(floor(car_d/4))
             
@@ -140,7 +140,13 @@ class Environment:
                 print("episode: {}, last_action:{}, last_reward:{:.4}, speed:{:.3}"
                                                 .format(self.episode, last_act, last_reward, float(car_speed)))
 
-                # action = agent.update([last_state, last_pos], [state, pos], last_reward)
+                
+                if flag:
+                    agent.update([last_state, last_pos], [state, pos], last_reward)
+                flag = True
+
+                action = agent.actor.act([state, pos])                
+
                 # print("Took action ", action)
                 
                 mess_out = str(action)

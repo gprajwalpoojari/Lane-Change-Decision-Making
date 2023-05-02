@@ -41,7 +41,8 @@ class Actor:
         self.learning_rate = 0.00025
         self.model = self._build_model()
         self.i = 1
-        self.z = np.zeros((1,1))
+        self.z = (self.model.trainable_weights)
+        # print("GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG {}".format(self.z))
         self.act_prob = 0
 
     def _build_model(self):
@@ -62,7 +63,7 @@ class Actor:
         return model
 
     def act(self, state):
-        act_prob = self.model.predict(state)
+        act_prob = self.model(state)
         act_value = np.random.choice(self.action_size, p=np.squeeze(act_prob))
         self.act_prob = tf.math.log(act_prob[0, act_value])
         return act_value  # returns action
@@ -75,8 +76,19 @@ class Actor:
 
     def train(self, advantage, tape):
         log_grad = tape.gradient(self.act_prob, self.model.trainable_variables)
-        self.z = self.gamma * self.lamda * self.z + self.i * log_grad
-        self.optimizer.apply_gradients(zip(self.z * advantage, self.model.trainable_variables))
+        # print("log_grad shape : {},".format(log_grad))
+        # self.z = self.gamma * self.lamda * self.z + self.i * log_grad
+        updated_grad = self.z
+        for l in range(len(self.z)):
+            self.z[l] = self.gamma * self.lamda * self.z[l] + self.i * log_grad[l] 
+            updated_grad[l] = self.z[l] * advantage[0][0]
+        # print ("UUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUuuuu {}".format(updated_grad))
+        # print("z shape : {}".format(self.z.shape))
+        # print("z is {}".format(self.z))
+        # print("advantage is {}".format(advantage))
+        # updated_grad = self.z * advantage
+
+        self.optimizer.apply_gradients(zip(updated_grad, self.model.trainable_variables))
         self.i = self.gamma * self.i
 
 
@@ -92,8 +104,9 @@ class Critic:
         self.epsilon_min = 0.3
         self.epsilon_decay = 0.9  # init with pure exploration
         self.learning_rate = 0.00025
+        self.i = 1
         self.model = self._build_model()
-        self.z = np.zeros((1,1))
+        self.z = self.model.trainable_variables
 
     def _build_model(self):
         # Neural Net for Deep-Q learning Model
@@ -120,8 +133,13 @@ class Critic:
 
     def train(self, v_state, advantage, tape):
         grad = tape.gradient(v_state, self.model.trainable_variables)
-        self.z = self.gamma * self.lamda * self.z + grad
-        self.optimizer.apply_gradients(zip(self.z * advantage, self.model.trainable_variables))
+        # self.z = self.gamma * self.lamda * self.z + grad
+        grad = self.z
+        for l in range(len(self.z)):
+            self.z[l] = self.gamma * self.lamda * self.z[l] + self.i * grad[l] 
+            grad[l] = self.z[l] * advantage[0][0]
+        self.i = self.lamda * self.i
+        self.optimizer.apply_gradients(zip(grad, self.model.trainable_variables))
 
 
 def connect(ser):
@@ -159,7 +177,7 @@ def _on_click_(x, y, button, pressed):
 class ActorCriticAgent:
     def __init__(self):
         self.EPISODES = 100
-        self.location = "/home/ritik/Autonomous-Driving/decision-making-CarND/CarND-test/build"
+        self.location = "/home/prajwal/Autonomous-Driving/decision-making-CarND/CarND-test/build"
 
         self.HOST = '127.0.0.1'
         self.PORT = 1234
@@ -172,15 +190,15 @@ class ActorCriticAgent:
         self.action_size = 3
         self.actor = Actor(self.state_height, self.state_width, self.action_size)
         self.critic = Critic(self.state_height, self.state_width, self.action_size)
-        # self.actor.load("/home/ritik/Autonomous-Driving/decision-making-CarND/CarND-test/src/train/data/actor/episode10_actor.h5")
-        # self.critic.load("/home/ritik/Autonomous-Driving/decision-making-CarND/CarND-test/src/train/data/critic/episode10_critic.h5")
+        # self.actor.load("/home/prajwal/Autonomous-Driving/decision-making-CarND/CarND-test/src/train/data/actor/episode10_actor.h5")
+        # self.critic.load("/home/prajwal/Autonomous-Driving/decision-making-CarND/CarND-test/src/train/data/critic/episode10_critic.h5")
         self.episode = 1
         self.gamma = 0.9
-        print("fine so far initialized agent")
+        # print("fine so far initialized agent")
         self.main_loop()
 
     def main_loop(self):
-        print("In main loop")
+        # print("In main loop")
         while self.episode <= self.EPISODES:
             # 开启程序
             pool = Pool(processes=2)
@@ -191,7 +209,7 @@ class ActorCriticAgent:
             pool.join()
             conn = result[0].get()
             sim = subprocess.Popen(
-                '/home/ritik/Autonomous-Driving/decision-making-CarND/term3_sim_linux/term3_sim.x86_64')
+                '/home/prajwal/Autonomous-Driving/decision-making-CarND/term3_sim_linux/term3_sim.x86_64')
             while not Listener(on_click=_on_click_):
                 pass
 
@@ -264,117 +282,119 @@ class ActorCriticAgent:
 
             # 开始训练过程
             flag = False
-            with tf.GradientTape() as tape:
-                while True:
-                    print("pass")
+            while True:
+                # print("pass")
+                try:
+                    data = conn.recv(2000)
+                except Exception as e:
+                    pass
+                while not data:
                     try:
                         data = conn.recv(2000)
                     except Exception as e:
                         pass
-                    while not data:
-                        try:
-                            data = conn.recv(2000)
-                        except Exception as e:
-                            pass
-                    data = bytes.decode(data)
-                    if data == "over":  # 此次迭代结束
-                        self.actor.save(
-                            "/home/ritik/Autonomous-Driving/decision-making-CarND/CarND-test/src/train/data/actor/episode" + str(
-                                episode) + "_actor.h5")
-                        self.critic.save(
-                            "/home/ritik/Autonomous-Driving/decision-making-CarND/CarND-test/src/train/data/critic/episode" + str(
-                                episode) + "_critic.h5")
-                        print("weight saved")
-                        print("episode: {}, epsilon: {}".format(episode, agent.epsilon))
-                        close_all(sim)
-                        conn.close()  # 关闭连接
-                        episode = episode + 1
-                        break
-                    try:
-                        j = json.loads(data)
-                    except Exception as e:
-                        close_all(sim)
-                        break
+                data = bytes.decode(data)
+                if data == "over":  # 此次迭代结束
+                    self.actor.save(
+                        "/home/prajwal/Autonomous-Driving/decision-making-CarND/CarND-test/src/train/data/actor/episode" + str(
+                            episode) + "_actor.h5")
+                    self.critic.save(
+                        "/home/prajwal/Autonomous-Driving/decision-making-CarND/CarND-test/src/train/data/critic/episode" + str(
+                            episode) + "_critic.h5")
+                    print("weight saved")
+                    print("episode: {}, epsilon: {}".format(episode, agent.epsilon))
+                    close_all(sim)
+                    conn.close()  # 关闭连接
+                    episode = episode + 1
+                    break
+                try:
+                    j = json.loads(data)
+                except Exception as e:
+                    close_all(sim)
+                    break
 
-                    # *****************在此处编写程序*****************
-                    last_state = state
-                    # print(last_state)
-                    last_pos = pos
-                    last_act = action
-                    # print(last_act)
-                    last_lane = ego_car_lane
-                    # **********************************************
+                # *****************在此处编写程序*****************
+                last_state = state
+                # print(last_state)
+                last_pos = pos
+                last_act = action
+                # print(last_act)
+                last_lane = ego_car_lane
+                # **********************************************
 
-                    # Main car's localization Data
-                    # car_x = j[1]['x']
-                    # car_y = j[1]['y']
-                    car_s = j[1]['s']
-                    car_d = j[1]['d']
-                    car_yaw = j[1]['yaw']
-                    car_speed = j[1]['speed']
-                    print(car_s)
-                    if car_speed == 0:
-                        mess_out = str(0)
-                        mess_out = str.encode(mess_out)
-                        conn.sendall(mess_out)
-                        continue
-                    # Sensor Fusion Data, a list of all other cars on the same side of the road.
-                    sensor_fusion = j[1]['sensor_fusion']
-                    ego_car_lane = int(floor(car_d / 4))
-                    if last_act == 0:
-                        last_reward = (2 * ((j[3] - 25.0) / 5.0))  # - abs(ego_car_lane - 1))
-                    else:
-                        last_reward = (2 * ((j[3] - 25.0) / 5.0)) - 10.0
-                    if grid[3:31, last_lane].sum() > 27 and last_act != 0:
-                        last_reward = -30.0
-
-                    grid = np.ones((51, 3))
-                    grid[31:35, ego_car_lane] = car_speed / 100.0
-                    # sensor_fusion_array = np.array(sensor_fusion)
-                    for i in range(len(sensor_fusion)):
-                        vx = sensor_fusion[i][3]
-                        vy = sensor_fusion[i][4]
-                        s = sensor_fusion[i][5]
-                        d = sensor_fusion[i][6]
-                        check_speed = sqrt(vx * vx + vy * vy)
-                        car_lane = int(floor(d / 4))
-                        if 0 <= car_lane < 3:
-                            s_dis = s - car_s
-                            if -36 < s_dis < 66:
-                                pers = - int(floor(s_dis / 2.0)) + 30
-                                grid[pers:pers + 4, car_lane] = - check_speed / 100.0 * 2.237
-                        if j[2] < -10:
-                            last_reward = float(j[2])  # reward -50, -100
-
-                    last_reward = last_reward / 10.0
-                    state = np.zeros((self.state_height, self.state_width))
-                    state[:, :] = grid[3:48, :]
-                    state = np.reshape(state, [-1, 1, self.state_height, self.state_width])
-                    # print(state)
-                    pos = [car_speed / 50, 0, 0]
-                    if ego_car_lane == 0:
-                        pos = [car_speed / 50, 0, 1]
-                    elif ego_car_lane == 1:
-                        pos = [car_speed / 50, 1, 1]
-                    elif ego_car_lane == 2:
-                        pos = [car_speed / 50, 1, 0]
-                    pos = np.reshape(pos, [1, 3])
-                    print("last_action:{}, last_reward:{:.4}, speed:{:.3}".format(last_act, last_reward,
-                                                                                  float(car_speed)))
-
-                    if flag:
-                        advantage = last_reward + self.gamma * self.critic.model.predict(
-                            [state, pos]) - self.critic.model.predict([last_state, last_pos])
-                        self.actor.train(advantage, tape)
-                        self.critic.train(self.critic.model.predict([last_state, last_pos]), advantage, tape)
-                    action = self.actor.act([state, pos])
-                    print("Took action ", action)
-                    flag = True
-                    # **********************************************
-
-                    mess_out = str(action)
+                # Main car's localization Data
+                # car_x = j[1]['x']
+                # car_y = j[1]['y']
+                car_s = j[1]['s']
+                car_d = j[1]['d']
+                car_yaw = j[1]['yaw']
+                car_speed = j[1]['speed']
+                # print(car_s)
+                if car_speed == 0:
+                    mess_out = str(0)
                     mess_out = str.encode(mess_out)
                     conn.sendall(mess_out)
+                    continue
+                # Sensor Fusion Data, a list of all other cars on the same side of the road.
+                sensor_fusion = j[1]['sensor_fusion']
+                ego_car_lane = int(floor(car_d / 4))
+                if last_act == 0:
+                    last_reward = (2 * ((j[3] - 25.0) / 5.0))  # - abs(ego_car_lane - 1))
+                else:
+                    last_reward = (2 * ((j[3] - 25.0) / 5.0)) - 10.0
+                if grid[3:31, last_lane].sum() > 27 and last_act != 0:
+                    last_reward = -30.0
+
+                grid = np.ones((51, 3))
+                grid[31:35, ego_car_lane] = car_speed / 100.0
+                # sensor_fusion_array = np.array(sensor_fusion)
+                for i in range(len(sensor_fusion)):
+                    vx = sensor_fusion[i][3]
+                    vy = sensor_fusion[i][4]
+                    s = sensor_fusion[i][5]
+                    d = sensor_fusion[i][6]
+                    check_speed = sqrt(vx * vx + vy * vy)
+                    car_lane = int(floor(d / 4))
+                    if 0 <= car_lane < 3:
+                        s_dis = s - car_s
+                        if -36 < s_dis < 66:
+                            pers = - int(floor(s_dis / 2.0)) + 30
+                            grid[pers:pers + 4, car_lane] = - check_speed / 100.0 * 2.237
+                    if j[2] < -10:
+                        last_reward = float(j[2])  # reward -50, -100
+
+                last_reward = last_reward / 10.0
+                state = np.zeros((self.state_height, self.state_width))
+                state[:, :] = grid[3:48, :]
+                state = np.reshape(state, [-1, 1, self.state_height, self.state_width])
+                # print(state)
+                pos = [car_speed / 50, 0, 0]
+                if ego_car_lane == 0:
+                    pos = [car_speed / 50, 0, 1]
+                elif ego_car_lane == 1:
+                    pos = [car_speed / 50, 1, 1]
+                elif ego_car_lane == 2:
+                    pos = [car_speed / 50, 1, 0]
+                pos = np.reshape(pos, [1, 3])
+                print("last_action:{}, last_reward:{:.4}, speed:{:.3}".format(last_act, last_reward,
+                                                                              float(car_speed)))
+
+                if flag:
+                    with tf.GradientTape() as criticTape:
+                        v_s = self.critic.model([last_state, last_pos])
+                    advantage = last_reward + self.gamma * self.critic.model.predict(
+                        [state, pos]) - self.critic.model.predict([last_state, last_pos])
+                    self.actor.train(advantage, actorTape)
+                    self.critic.train(v_s, advantage, criticTape)
+                with tf.GradientTape() as actorTape:
+                    action = self.actor.act([state, pos])
+                print("Took action ", action)
+                flag = True
+                # **********************************************
+
+                mess_out = str(action)
+                mess_out = str.encode(mess_out)
+                conn.sendall(mess_out)
 
 print("calling agent")
 ActorCriticAgent()

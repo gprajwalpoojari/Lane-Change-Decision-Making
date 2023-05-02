@@ -2,3 +2,7 @@
  episode 1 epsilon 0.3
  episode 1 epsilon 0.3
  episode 1 epsilon 0.3
+ episode 1 epsilon 0.3
+ episode 2 epsilon 0.3
+ episode 3 epsilon 0.3
+ episode 4 epsilon 0.3

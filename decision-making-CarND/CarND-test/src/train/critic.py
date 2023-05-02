@@ -1,8 +1,8 @@
 from tensorflow.keras.models import Model
 from tensorflow.keras.layers import Input, Dense, Conv2D, Flatten, concatenate
 from tensorflow.keras.optimizers import Adam
-
-
+import tensorflow as tf
+import numpy as np
 
 class Critic:
     def __init__(self, state_height, state_width, value_size, learning_rate):
@@ -10,8 +10,8 @@ class Critic:
         self.state_width = state_width
         self.value_size = value_size
         self.learning_rate = learning_rate
-        self.theta = 0
         self.model = self._build_model()
+        self.theta = [np.zeros(arr.shape) for arr in self.model.trainable_variables]
 
     # Neural Net for Critic Model. Takes the current state and outputs future value of the state
     def _build_model(self):
@@ -29,15 +29,20 @@ class Critic:
         model = Model(inputs=[input1, input2], outputs=out_put)
         self.optimizer = Adam(lr=self.learning_rate)
         return model
+
+    def train(self, gamma, lamda, advantage, state):
+        with tf.GradientTape() as tape:
+            value = self.model(state)
+            loss = value
+        print("#################################CRITIC LOSS#################################")
+        print(loss)
+        gradient = tape.gradient(loss, self.model.trainable_variables)
+        updated_gradient = []
+        for i in range(len(self.theta)):
+            self.theta[i] = gamma * lamda * self.theta[i] + gradient[i]
+            updated_gradient.append(self.theta[i] * advantage[0][0])
+        self.optimizer.apply_gradients(zip(updated_gradient, self.model.trainable_variables))
     
-    def calculate_gradient(self):
-        return 0
-
-    def train(self, gamma, lamda, advantage):
-        gradient = self.calculate_gradient()
-        self.theta = gamma * lamda * self.theta + gradient
-        self.optimizer.apply_gradients(zip(self.theta * advantage, self.model.trainable_variables))
-
     def load(self, name):
         self.model.load_weights(name)
 

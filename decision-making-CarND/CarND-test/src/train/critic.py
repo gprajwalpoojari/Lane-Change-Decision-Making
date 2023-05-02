@@ -11,7 +11,7 @@ class Critic:
         self.value_size = value_size
         self.learning_rate = learning_rate
         self.model = self._build_model()
-        self.theta = [np.zeros(arr.shape) for arr in self.model.trainable_variables]
+        self.z = [np.zeros(arr.shape) for arr in self.model.trainable_variables]
 
     # Neural Net for Critic Model. Takes the current state and outputs future value of the state
     def _build_model(self):
@@ -31,16 +31,15 @@ class Critic:
         return model
 
     def train(self, gamma, lamda, advantage, state):
-        with tf.GradientTape() as tape:
+        with tf.GradientTape() as critictape:
             value = self.model(state)
-            loss = value
+        gradient = critictape.gradient(value, self.model.trainable_variables)
         print("#################################CRITIC LOSS#################################")
-        print(loss)
-        gradient = tape.gradient(loss, self.model.trainable_variables)
+        print(value)
         updated_gradient = []
-        for i in range(len(self.theta)):
-            self.theta[i] = gamma * lamda * self.theta[i] + gradient[i]
-            updated_gradient.append(self.theta[i] * advantage[0][0])
+        for i in range(len(self.z)):
+            self.z[i] = gamma * lamda * self.z[i] + gradient[i]
+            updated_gradient.append(self.z[i] * advantage[0][0])
         self.optimizer.apply_gradients(zip(updated_gradient, self.model.trainable_variables))
     
     def load(self, name):

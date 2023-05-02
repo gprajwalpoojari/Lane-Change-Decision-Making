@@ -4,9 +4,9 @@ import json
 import random
 import numpy as np
 from collections import deque
-from keras.models import Sequential, Model
-from keras.layers import Input, Dense, Conv2D, Flatten, concatenate
-from keras.optimizers import Adam
+from tensorflow.keras.models import Sequential, Model
+from tensorflow.keras.layers import Input, Dense, Conv2D, Flatten, concatenate
+from tensorflow.keras.optimizers import Adam
 from math import floor, sqrt
 import tensorflow as tf
 import subprocess
@@ -15,10 +15,13 @@ import psutil
 import pyautogui
 import os
 from multiprocessing import Pool
-from keras.backend.tensorflow_backend import set_session
-config = tf.ConfigProto()
+from pynput.mouse import Listener
+from tensorflow.python.keras.backend import set_session
+from matplotlib import pyplot as plt
+
+config = tf.compat.v1.ConfigProto()
 config.gpu_options.per_process_gpu_memory_fraction = 0.3
-set_session(tf.Session(config=config))
+set_session(tf.compat.v1.Session(config=config))
 # import os
 # os.environ["CUDA_DEVICE_ORDER"] = "PCI_BUS_ID"
 # os.environ["CUDA_VISIBLE_DEVICES"] = "4,5,6,7"
@@ -39,6 +42,9 @@ class DQNAgent:
         self.epsilon_decay = 0.999
         self.learning_rate = 0.001
         self.model = self._build_model()
+        self.num_collisions_list = []
+        self.avg_velocity_list = []
+        self.num_lane_change_list = []
 
     def _build_model(self):
         # Neural Net for Deep-Q learning Model
@@ -124,9 +130,11 @@ def close_all(sim):
     time.sleep(2)
     kill_terminal()
 
+def _on_click_(x, y, button, pressed):
+    return pressed
 
 EPISODES = 20
-location = "your_path_to/CarND-test/build"
+location = "/home/prajwal/Autonomous-Driving/decision-making-CarND/CarND-test/build"
 
 HOST = '127.0.0.1'
 PORT = 1234
@@ -157,10 +165,13 @@ while episode <= EPISODES:
     pool.join()
     conn = result[0].get()
     sim = subprocess.Popen('../../../term3_sim_linux/term3_sim.x86_64')
+    while not Listener(on_click=_on_click_):
+        pass
     time.sleep(2)
-    pyautogui.click(x=1164, y=864, button='left')
+    pyautogui.click(x=1913, y=1426, button='left')
     time.sleep(6)
-    pyautogui.click(x=465, y=535, button='left')
+    pyautogui.click(x=1708, y=1711, button='left')
+
     try:
         data = conn.recv(2000)  # 把接收的数据实例化
     except Exception as e:
@@ -220,6 +231,10 @@ while episode <= EPISODES:
     conn.sendall(mess_out)
     count = 0
     start = time.time()
+    num_lane_change = 0
+    num_collisions = 0
+    avg_velocity = 0
+    i = 0
     while True:
         now = time.time()
         if (now - start) / 60 > 15:
@@ -237,9 +252,15 @@ while episode <= EPISODES:
         data = bytes.decode(data)
         if data == "over":
             print("episode:{}".format(episode))
-            # close_all(sim)
+            close_all(sim)
             conn.close()  # 关闭连接
             episode = episode + 1
+            with open('/home/prajwal/Autonomous-Driving/decision-making-CarND/CarND-test/src/test/test_metric.csv', 'a') as f:
+                f.write("{},{},{}\n".format(num_lane_change, num_collisions, avg_velocity))
+
+            agent.avg_velocity_list.append(avg_velocity)
+            agent.num_collisions_list.append(num_collisions)
+            agent.num_lane_change_list.append(num_lane_change)
             break
         j = json.loads(data)
         last_state = state
@@ -253,7 +274,10 @@ while episode <= EPISODES:
         car_d = j[1]['d']
         car_yaw = j[1]['yaw']
         car_speed = j[1]['speed']
-        print(car_s)
+
+        i += 1
+        avg_velocity = (avg_velocity * (i-1) + car_speed) / i 
+        # print(car_s)
         if car_speed == 0:
             mess_out = str(0)
             mess_out = str.encode(mess_out)
@@ -305,8 +329,17 @@ while episode <= EPISODES:
 
         action = agent.act([state, pos])
         if action != 0:
+            num_lane_change += 1
             print(action)
 
         mess_out = str(action)
         mess_out = str.encode(mess_out)
         conn.sendall(mess_out)
+
+X = [i for i in range(1,EPISODES+1)]
+plt.plot(X, agent.avg_velocity_list)
+plt.plot(X, agent.num_collisions_list)
+plt.plot(X, agent.num_lane_change_list)
+plt.show()
+
+

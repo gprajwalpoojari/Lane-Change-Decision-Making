@@ -34,14 +34,14 @@ class Actor:
         self.state_width = state_width
         self.action_size = action_size
         self.gamma = 0.90  # discount rate
-        self.lamda = 0.90  # eligibility trace decay
+        self.lamda = 0.80  # eligibility trace decay
         self.epsilon = 0.3  # exploration rate
         self.epsilon_min = 0.3
         self.epsilon_decay = 0.9  # init with pure exploration
         self.learning_rate = 0.00025
         self.model = self._build_model()
         self.i = 1
-        self.z = (self.model.trainable_weights)
+        self.z = [np.zeros(arr.shape) for arr in self.model.trainable_variables]
         # print("GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG {}".format(self.z))
         self.act_prob = 0
 
@@ -64,9 +64,18 @@ class Actor:
 
     def act(self, state):
         act_prob = self.model(state)
+        # print("############################Policy#################")
+        # print(act_prob)
         act_value = np.random.choice(self.action_size, p=np.squeeze(act_prob))
-        self.act_prob = tf.math.log(act_prob[0, act_value])
+        
+        self.act_prob = tf.math.log(act_prob[0,act_value])
+        
         return act_value  # returns action
+    
+
+    def reset(self):
+        self.i = 1
+        self.z = [np.zeros(arr.shape) for arr in self.model.trainable_variables]
 
     def load(self, name):
         self.model.load_weights(name)
@@ -87,7 +96,8 @@ class Actor:
         # print("z is {}".format(self.z))
         # print("advantage is {}".format(advantage))
         # updated_grad = self.z * advantage
-
+        # print("############################log Grad#################")
+        # print(self.act_prob)
         self.optimizer.apply_gradients(zip(updated_grad, self.model.trainable_variables))
         self.i = self.gamma * self.i
 
@@ -99,14 +109,14 @@ class Critic:
         self.state_width = state_width
         self.action_size = action_size
         self.gamma = 0.90  # discount rate
-        self.lamda = 0.90  # eligibility trace decay
+        self.lamda = 0.80  # eligibility trace decay
         self.epsilon = 0.3  # exploration rate
         self.epsilon_min = 0.3
         self.epsilon_decay = 0.9  # init with pure exploration
         self.learning_rate = 0.00025
         self.i = 1
         self.model = self._build_model()
-        self.z = self.model.trainable_variables
+        self.z = [np.zeros(arr.shape) for arr in self.model.trainable_variables]
 
     def _build_model(self):
         # Neural Net for Deep-Q learning Model
@@ -125,6 +135,10 @@ class Critic:
         self.optimizer = Adam(lr=self.learning_rate)
         return model
 
+    def reset(self):
+        self.i = 1
+        self.z = [np.zeros(arr.shape) for arr in self.model.trainable_variables]
+
     def load(self, name):
         self.model.load_weights(name)
 
@@ -132,14 +146,18 @@ class Critic:
         self.model.save_weights(name)
 
     def train(self, v_state, advantage, tape):
+        # print("############################ADVANTAGE#################")
+        # print(advantage)
+        # print("############################V_STATE#################")
+        # print(v_state)
         grad = tape.gradient(v_state, self.model.trainable_variables)
         # self.z = self.gamma * self.lamda * self.z + grad
-        grad = self.z
+        updated_grad = self.z
         for l in range(len(self.z)):
-            self.z[l] = self.gamma * self.lamda * self.z[l] + self.i * grad[l] 
-            grad[l] = self.z[l] * advantage[0][0]
-        self.i = self.lamda * self.i
-        self.optimizer.apply_gradients(zip(grad, self.model.trainable_variables))
+            self.z[l] = self.gamma * self.lamda * self.z[l] + self.i*grad[l] 
+            updated_grad[l] = self.z[l] * advantage[0][0]
+        self.optimizer.apply_gradients(zip(updated_grad, self.model.trainable_variables))
+        self.i=self.i*self.gamma
 
 
 def connect(ser):
@@ -190,10 +208,13 @@ class ActorCriticAgent:
         self.action_size = 3
         self.actor = Actor(self.state_height, self.state_width, self.action_size)
         self.critic = Critic(self.state_height, self.state_width, self.action_size)
-        # self.actor.load("/home/prajwal/Autonomous-Driving/decision-making-CarND/CarND-test/src/train/data/actor/episode10_actor.h5")
-        # self.critic.load("/home/prajwal/Autonomous-Driving/decision-making-CarND/CarND-test/src/train/data/critic/episode10_critic.h5")
-        self.episode = 1
+        # self.actor.load("/home/prajwal/Autonomous-Driving/decision-making-CarND/CarND-test/src/train/data/actor/episode48_actor.h5")
+        # self.critic.load("/home/prajwal/Autonomous-Driving/decision-making-CarND/CarND-test/src/train/data/critic/episode48_critic.h5")
+        self.episode =1
         self.gamma = 0.9
+        self.num_lane_changes_list = []
+        self.avg_velocity_list = []
+        self.num_collisions_list = []
         # print("fine so far initialized agent")
         self.main_loop()
 
@@ -215,11 +236,11 @@ class ActorCriticAgent:
 
             while not Listener(on_click=_on_click_):
                 pass
-            time.sleep(5)
-            pyautogui.click(x=701, y=791, button='left')
-            pyautogui.click(x=1164, y=864, button='left')
+
+            time.sleep(2)
+            pyautogui.click(x=1913, y=1426, button='left')
             time.sleep(6)
-            pyautogui.click(x=975, y=885, button='left')
+            pyautogui.click(x=1708, y=1711, button='left')
             try:
                 data = conn.recv(2000)  # 把接收的数据实例化
             except Exception as e:
@@ -282,6 +303,12 @@ class ActorCriticAgent:
 
             # 开始训练过程
             flag = False
+            self.actor.reset()
+            self.critic.reset()
+            self.num_lane_changes = 0
+            self.avg_velocity = 0
+            self.num_collisions = 0
+            i = 0
             while True:
                 # print("pass")
                 try:
@@ -295,24 +322,34 @@ class ActorCriticAgent:
                         pass
                 data = bytes.decode(data)
                 if data == "over":  # 此次迭代结束
+                    print("Num lane changes : {}".format(self.num_lane_changes))
+                    print("Average Velocity : {}".format(self.avg_velocity))
+                    print("Num Collisions : {}".format(self.num_collisions))
+                    self.num_lane_changes_list.append(self.num_lane_changes)
+                    self.avg_velocity_list.append(self.avg_velocity)
+                    self.num_collisions_list.append(self.num_collisions)
+                    with open('/home/prajwal/Autonomous-Driving/decision-making-CarND/CarND-test/src/train/ac.txt', 'a') as f:
+                        f.write(" episode {} num_lane_changes {}\n".format(self.episode, self.num_lane_changes))
+                        f.write(" episode {} avg_velocity {}\n".format(self.episode, self.avg_velocity))
+                        f.write(" episode {} num_collisions {}\n".format(self.episode, self.num_collisions))
                     self.actor.save(
                         "/home/prajwal/Autonomous-Driving/decision-making-CarND/CarND-test/src/train/data/actor/episode" + str(
-                            episode) + "_actor.h5")
+                            self.episode) + "_actor.h5")
                     self.critic.save(
                         "/home/prajwal/Autonomous-Driving/decision-making-CarND/CarND-test/src/train/data/critic/episode" + str(
-                            episode) + "_critic.h5")
-                    print("weight saved")
-                    print("episode: {}, epsilon: {}".format(episode, agent.epsilon))
+                            self.episode) + "_critic.h5")
+                    # print("weight saved")
+                    # print("episode: {}, epsilon: {}".format(episode, agent.epsilon))
                     close_all(sim)
                     conn.close()  # 关闭连接
-                    episode = episode + 1
+                    self.episode = self.episode + 1
                     break
                 try:
                     j = json.loads(data)
                 except Exception as e:
                     close_all(sim)
                     break
-
+                # print(j)
                 # *****************在此处编写程序*****************
                 last_state = state
                 # print(last_state)
@@ -329,6 +366,7 @@ class ActorCriticAgent:
                 car_d = j[1]['d']
                 car_yaw = j[1]['yaw']
                 car_speed = j[1]['speed']
+
                 # print(car_s)
                 if car_speed == 0:
                     mess_out = str(0)
@@ -362,7 +400,8 @@ class ActorCriticAgent:
                             grid[pers:pers + 4, car_lane] = - check_speed / 100.0 * 2.237
                     if j[2] < -10:
                         last_reward = float(j[2])  # reward -50, -100
-
+                        self.num_collisions += 1
+                print("J[2] is : {}".format(j[2]))
                 last_reward = last_reward / 10.0
                 state = np.zeros((self.state_height, self.state_width))
                 state[:, :] = grid[3:48, :]
@@ -389,12 +428,20 @@ class ActorCriticAgent:
                 with tf.GradientTape() as actorTape:
                     action = self.actor.act([state, pos])
                 print("Took action ", action)
+                if action != 0:
+                    self.num_lane_changes += 1
                 flag = True
                 # **********************************************
-
+                i += 1
+                self.avg_velocity = (self.avg_velocity * (i-1) + car_speed) / i
                 mess_out = str(action)
                 mess_out = str.encode(mess_out)
                 conn.sendall(mess_out)
+        with open('/home/prajwal/Autonomous-Driving/decision-making-CarND/CarND-test/src/train/ac_list.txt', 'a') as f:
+            f.write(" num_lane_changes_list {}\n".format(self.num_lane_changes_list))
+            f.write(" avg_velocity_list {}\n".format(self.avg_velocity_list))
+            f.write(" num_collisions_list {}\n".format(self.num_collisions_list))
+
 
 print("calling agent")
 ActorCriticAgent()

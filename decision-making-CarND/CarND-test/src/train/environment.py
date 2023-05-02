@@ -3,6 +3,7 @@ import json
 from sim_utils import *
 from actor_critic_agent import ActorCriticAgent
 import numpy as np
+import tensorflow as tf
 
 class Environment:
     def __init__(self):
@@ -92,6 +93,7 @@ class Environment:
             mess_out = str.encode(mess_out)
             conn.sendall(mess_out)
             flag = False
+            agent.reinitialize()
             while True:
                 try:
                     data = conn.recv(2000)
@@ -147,7 +149,7 @@ class Environment:
 
                 action = agent.actor.act([state, pos])                
 
-                # print("Took action ", action)
+                print("Took action ", action)
                 
                 mess_out = str(action)
                 mess_out = str.encode(mess_out)

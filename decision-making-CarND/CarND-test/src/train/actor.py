@@ -13,6 +13,7 @@ class Actor:
         self.action_size = action_size
         self.learning_rate = learning_rate
         self.model = self._build_model()
+        self.i = 1
         self.z = [np.zeros(arr.shape) for arr in self.model.trainable_variables]
 
     # Neural Net for Actor Model. Takes the current state and outputs probabilities of actions
@@ -33,28 +34,24 @@ class Actor:
         return model
 
 
-    def train(self, gamma, lamda, advantage, state):
-        with tf.GradientTape() as tape:
-            action_distribution = self.model(state)
-            act_value = np.random.choice(self.action_size, p=np.squeeze(action_distribution))
-            loss = tf.math.log(action_distribution[0, act_value])
-
-        print("#################################ACTOR LOSS#################################")
-        print(loss)
-        gradient = tape.gradient(loss, self.model.trainable_variables)
+    def train(self, gamma, lamda, advantage):
+        # print("#################################ACTOR LOSS#################################")
+        # print(self.loss)
         # print(gradient)
         updated_gradient = []
         for i in range(len(self.z)):
-            self.z[i] = gamma * lamda * self.z[i] + gradient[i]
+            self.z[i] = gamma * lamda * self.z[i] + self.i * self.gradient[i]
             updated_gradient.append(self.z[i] * advantage[0][0])
-    
+        self.i = gamma * self.i
         self.optimizer.apply_gradients(zip(updated_gradient, self.model.trainable_variables))
 
     # Provides an action given a current state
     def act(self, state):
-
-        action_distribution = self.model.predict(state)
-        act_value = np.random.choice(self.action_size, p=np.squeeze(action_distribution))
+        with tf.GradientTape() as actortape:
+            action_distribution = self.model(state)
+            act_value = np.random.choice(self.action_size, p=np.squeeze(action_distribution))
+            loss = tf.math.log(action_distribution[0, act_value])
+        self.gradient = actortape.gradient(loss, self.model.trainable_variables)
         return act_value  # returns action
 
     def load(self, name):

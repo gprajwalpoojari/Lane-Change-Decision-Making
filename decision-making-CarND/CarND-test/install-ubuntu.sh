@@ -12,3 +12,9 @@ cd ..
 cd ..
 sudo ln -s /usr/lib64/libuWS.so /usr/lib/libuWS.so
 sudo rm -r uWebSockets
+mkdir build
+cd build
+cmake ..
+make
+cd ..
+

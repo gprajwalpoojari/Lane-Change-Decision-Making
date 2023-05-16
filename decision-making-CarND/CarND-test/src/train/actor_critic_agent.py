@@ -13,7 +13,7 @@ class ActorCriticAgent:
         self.val_size = 1
         self.actor = Actor(state_height, state_width, self.action_size, self.learning_rate)
         self.critic = Critic(state_height, state_width, self.val_size, self.learning_rate)
-        self.path = "/home/prajwal/Autonomous-Driving/decision-making-CarND/CarND-test/src/train/episode/"
+        self.path = "/home/prajwal/Lane-Change-Decision-Making/decision-making-CarND/CarND-test/src/train/episode/"
 
     def load(self, episode):
         actor_path = self.path + '/actor/' + str(episode) + ".h5"

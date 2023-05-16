@@ -1,4 +1,4 @@
-name: ActorCritic
+name: LaneChange
 channels:
   - nvidia/label/cuda-11.4.4
   - defaults
@@ -167,4 +167,4 @@ dependencies:
       - termcolor==1.1.0
       - typing-extensions==3.7.4.3
       - wrapt==1.12.1
-prefix: /home/prajwal/miniconda3/envs/ActorCritic
+prefix: /home/prajwal/miniconda3/envs/LaneChange

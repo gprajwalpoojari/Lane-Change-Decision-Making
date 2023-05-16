@@ -17,6 +17,8 @@ import os
 import pickle
 from multiprocessing import Pool
 from tensorflow.python.keras.backend import set_session
+
+os.environ['TF_XLA_FLAGS'] = '--tf_xla_enable_xla_devices'
 config = tf.compat.v1.ConfigProto()
 # config.gpu_options.allow_growth = True
 config.gpu_options.per_process_gpu_memory_fraction = 0.5
@@ -149,7 +151,7 @@ def close_all(sim):
 
 
 EPISODES = 100
-location = "/home/prajwal/Autonomous-Driving/decision-making-CarND/CarND-test/build"
+location = "/home/prajwal/Lane-Change-Decision-Making/decision-making-CarND/CarND-test/build"
 
 HOST = '127.0.0.1'
 PORT = 1234
@@ -179,7 +181,7 @@ while episode <= EPISODES:
     pool.close()
     pool.join()
     conn = result[0].get()
-    sim = subprocess.Popen('/home/prajwal/Autonomous-Driving/decision-making-CarND/term3_sim_linux/term3_sim.x86_64')
+    sim = subprocess.Popen('/home/prajwal/Lane-Change-Decision-Making/decision-making-CarND/term3_sim_linux/term3_sim.x86_64')
     time.sleep(2)
     pyautogui.click(x=1913, y=1426, button='left')
     time.sleep(6)
@@ -263,16 +265,16 @@ while episode <= EPISODES:
                 pass
         data = bytes.decode(data)
         if data == "over":  # 此次迭代结束
-            agent.save("/home/prajwal/Autonomous-Driving/decision-making-CarND/CarND-test/src/train/episode" + str(episode) + ".h5")
+            agent.save("/home/prajwal/Lane-Change-Decision-Making/decision-making-CarND/CarND-test/src/train/episode" + str(episode) + ".h5")
             print("weight saved")
             print("episode: {}, epsilon: {}".format(episode, agent.epsilon))
-            with open('/home/prajwal/Autonomous-Driving/decision-making-CarND/CarND-test/src/train/train.txt', 'a') as f:
+            with open('/home/prajwal/Lane-Change-Decision-Making/decision-making-CarND/CarND-test/src/train/train.txt', 'a') as f:
                 f.write(" episode {} epsilon {}\n".format(episode, agent.epsilon))
             close_all(sim)
             conn.close()  # 关闭连接
-            with open('/home/prajwal/Autonomous-Driving/decision-making-CarND/CarND-test/src/train/exp1.pkl', 'wb') as exp1:
+            with open('/home/prajwal/Lane-Change-Decision-Making/decision-making-CarND/CarND-test/src/train/exp1.pkl', 'wb') as exp1:
                 pickle.dump(agent.memory1, exp1)
-            with open('/home/prajwal/Autonomous-Driving/decision-making-CarND/CarND-test/src/train/exp2.pkl', 'wb') as exp2:
+            with open('/home/prajwal/Lane-Change-Decision-Making/decision-making-CarND/CarND-test/src/train/exp2.pkl', 'wb') as exp2:
                 pickle.dump(agent.memory2, exp2)
             # with open('exp1.pkl', 'rb') as exp1:
             #     agent.memory1 = pickle.load(exp1)

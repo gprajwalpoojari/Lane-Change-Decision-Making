@@ -22,7 +22,7 @@ def setup_server(host='127.0.0.1', port=1234):
     server.listen(1)
     return server
 
-def launch_simulator(server, location="/home/prajwal/Autonomous-Driving/decision-making-CarND/CarND-test/build"):
+def launch_simulator(server, location="/home/prajwal/Lane-Change-Decision-Making/decision-making-CarND/CarND-test/build"):
     pool = Pool(processes=2)
     result = []
     result.append(pool.apply_async(connect, (server,)))
@@ -30,7 +30,7 @@ def launch_simulator(server, location="/home/prajwal/Autonomous-Driving/decision
     pool.close()
     pool.join()
     conn = result[0].get()
-    sim = subprocess.Popen('/home/prajwal/Autonomous-Driving/decision-making-CarND/term3_sim_linux/term3_sim.x86_64')
+    sim = subprocess.Popen('/home/prajwal/Lane-Change-Decision-Making/decision-making-CarND/term3_sim_linux/term3_sim.x86_64')
     while not Listener(on_click=_on_click_):
         pass
     time.sleep(2)

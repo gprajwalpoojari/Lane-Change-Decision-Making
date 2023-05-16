@@ -1,4 +1,4 @@
-name: CarND2
+name: CarND
 channels:
   - https://mirrors.tuna.tsinghua.edu.cn/anaconda/cloud/conda-forge
   - https://mirrors.tuna.tsinghua.edu.cn/anaconda/pkgs/main
@@ -75,5 +75,5 @@ dependencies:
     - termcolor==1.1.0
     - tqdm==4.31.1
     - werkzeug==0.14.1
-prefix: /home/prajwal/miniconda3/envs/CarND2
+prefix: /home/prajwal/miniconda3/envs/CarND
 

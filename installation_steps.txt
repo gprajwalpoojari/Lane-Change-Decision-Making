@@ -38,8 +38,7 @@ Environment configuration steps:
 
     Enter the decision-making-CarND/CarND-test folder, run install-ubuntu.sh to install dependencies (bash install-ubuntu.sh)
 
-    Keep it in the decision-making-CarND/CarND-test folder and compile it: mkdir build && cd build cmake .. && make At this 
-    time, run ./path_planning and it shows that the connect error is normal
+    Run .build/path_planning and it shows that the connect error is normal
     
     Install anaconda3 or miniconda3
 

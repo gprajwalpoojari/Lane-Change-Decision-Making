@@ -109,7 +109,7 @@ class Environment:
                     agent.save(self.episode)
                     print("weight saved")
                     print("episode: {}".format(self.episode))
-                    with open('/home/prajwal/Autonomous-Driving/decision-making-CarND/CarND-test/src/train/train.txt', 'a') as f:
+                    with open('/home/prajwal/Lane-Change-Decision-Making/decision-making-CarND/CarND-test/src/train/train.txt', 'a') as f:
                         f.write(" episode {}\n".format(self.episode))
                     close_all(sim)
                     conn.close()

@@ -19,4 +19,7 @@ After training the network, the model makes lane changes only when required. Her
 
 ![test](https://github.com/gprajwalpoojari/Lane-Change-Decision-Making/assets/53962958/4e37c7cc-5b5e-4e33-bfaf-b46db4238534)
 
+## References
+https://arxiv.org/pdf/1904.00231.pdf
+
 

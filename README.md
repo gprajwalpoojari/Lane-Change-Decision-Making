@@ -1,7 +1,7 @@
 # Lane-Change-Decision-Making-using-Reinforcement-Learning
 
 
-## Final model output
+## Demo
 After training the network, the model makes lane changes only when required. Here is an example:
 
 ![test](https://github.com/gprajwalpoojari/Lane-Change-Decision-Making/assets/53962958/4e37c7cc-5b5e-4e33-bfaf-b46db4238534)
